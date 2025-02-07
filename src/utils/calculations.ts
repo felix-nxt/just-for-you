@@ -1,34 +1,40 @@
-export const calculateBasic = (expression: string): string => {
-  try {
-    // Replace × with * and ÷ with / for evaluation
-    const sanitizedExpression = expression.replace(/×/g, "*").replace(/÷/g, "/")
-    return Function(`'use strict'; return (${sanitizedExpression})`)()
-  } catch (error) {
-    return "Error"
+export function roundToSignificantDigits(num: number, significantDigits = 6): number {
+  if (num === 0) {
+    return 0
   }
+  const d = Math.ceil(Math.log10(Math.abs(num)))
+  const power = significantDigits - d
+  const magnitude = Math.pow(10, power)
+  const shifted = Math.round(num * magnitude)
+  return shifted / magnitude
 }
 
-export const convertBinary = (num: string, from: number, to: number): string => {
-  try {
-    return Number.parseInt(num, from).toString(to)
-  } catch (error) {
-    return "Error"
+export function convertBinary(value: string, fromBase: number, toBase: number): string {
+  const decimal = Number.parseInt(value, fromBase)
+  if (isNaN(decimal)) {
+    throw new Error("Ungültige Eingabe für das gewählte Zahlensystem.")
   }
+  return decimal.toString(toBase)
 }
 
-export const calculateDataSize = (size: number, from: string, to: string): number => {
-  const units = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 * 1024,
-    GB: 1024 * 1024 * 1024,
-    TB: 1024 * 1024 * 1024 * 1024,
-  }
-
-  return (size * units[from]) / units[to]
+export function calculateDataSize(size: number, fromUnit: string, toUnit: string): number {
+  const units = ["B", "KB", "MB", "GB", "TB"]
+  const fromIndex = units.indexOf(fromUnit)
+  const toIndex = units.indexOf(toUnit)
+  return size * Math.pow(1024, fromIndex - toIndex)
 }
 
-export const calculatePixels = (width: number, height: number, colorDepth: number): number => {
-  return width * height * colorDepth
+export function calculateImageSize(width: number, height: number, colorDepth: number): number {
+  return (width * height * colorDepth) / 8 // Result in bytes
+}
+
+export function calculateVideoSize(
+  width: number,
+  height: number,
+  colorDepth: number,
+  frameRate: number,
+  duration: number,
+): number {
+  return (width * height * colorDepth * frameRate * duration) / 8 // Result in bytes
 }
 

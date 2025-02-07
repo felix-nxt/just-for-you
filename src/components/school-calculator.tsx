@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { roundToSignificantDigits } from "@/utils/calculations"
 
 interface SchoolCalculatorProps {
   onCalculation: (input: string, result: string) => void
@@ -31,20 +32,18 @@ export default function SchoolCalculator({ onCalculation }: SchoolCalculatorProp
     }
 
     const sum = validGrades.reduce((a, b) => a + b, 0)
-    const average = sum / validGrades.length
+    const average = roundToSignificantDigits(sum / validGrades.length)
 
-    onCalculation(
-      `Durchschnitt von ${validGrades.length} Noten`,
-      `${average.toFixed(2)} (${getGradeRecommendation(average)})`,
-    )
+    onCalculation(`Durchschnitt von ${validGrades.length} Noten`, `${average} (${getGradeRecommendation(average)})`)
   }
 
   const getGradeRecommendation = (average: number): string => {
-    if (average <= 1.5) return "Sehr gut"
-    if (average <= 2.5) return "Gut"
-    if (average <= 3.5) return "Befriedigend"
-    if (average <= 4.5) return "Ausreichend"
-    return "Mangelhaft"
+    if (average <= 1.5) return "Sehr gut (1)"
+    if (average <= 2.5) return "Gut (2)"
+    if (average <= 3.5) return "Befriedigend (3)"
+    if (average <= 4.5) return "Ausreichend (4)"
+    if (average <= 5.5) return "Mangelhaft (5)"
+    return "Ungenügend (6)"
   }
 
   return (

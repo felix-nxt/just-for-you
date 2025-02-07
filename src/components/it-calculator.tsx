@@ -6,16 +6,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { convertBinary, calculateDataSize, calculatePixels } from "@/utils/calculations"
+import ErrorBadge from "./error-badge"
+import {
+  convertBinary,
+  calculateDataSize,
+  calculateImageSize,
+  calculateVideoSize,
+  roundToSignificantDigits,
+} from "@/utils/calculations"
 
 interface ITCalculatorProps {
   onCalculation: (input: string, result: string) => void
 }
 
 export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
-  const [binaryInput, setBinaryInput] = useState("")
+  const [numberInput, setNumberInput] = useState("")
   const [fromBase, setFromBase] = useState("10")
   const [toBase, setToBase] = useState("2")
+  const [errorMessage, setErrorMessage] = useState("")
 
   const [dataSize, setDataSize] = useState("")
   const [fromUnit, setFromUnit] = useState("B")
@@ -24,36 +32,94 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
   const [width, setWidth] = useState("")
   const [height, setHeight] = useState("")
   const [colorDepth, setColorDepth] = useState("24")
+  const [frameRate, setFrameRate] = useState("30")
+  const [duration, setDuration] = useState("")
+
+  const bases = {
+    "2": "Binär (2)",
+    "3": "Ternär (3)",
+    "8": "Oktal (8)",
+    "10": "Dezimal (10)",
+    "16": "Hexadezimal (16)",
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"]
 
   const handleBaseConversion = () => {
-    if (!binaryInput) {
-      alert("Bitte geben Sie eine Zahl ein.")
+    setErrorMessage("")
+    if (!numberInput) {
+      setErrorMessage("Bitte geben Sie eine Zahl ein.")
       return
     }
-    const result = convertBinary(binaryInput, Number.parseInt(fromBase), Number.parseInt(toBase))
-    onCalculation(`Konvertiere ${binaryInput} von Basis ${fromBase} zu Basis ${toBase}`, result)
+
+    try {
+      const result = convertBinary(numberInput, Number.parseInt(fromBase), Number.parseInt(toBase))
+      onCalculation(`Konvertiere ${numberInput} von ${bases[fromBase]} zu ${bases[toBase]}`, result)
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
   }
 
   const handleDataSizeConversion = () => {
+    setErrorMessage("")
     if (!dataSize) {
-      alert("Bitte geben Sie eine Größe ein.")
+      setErrorMessage("Bitte geben Sie eine Größe ein.")
       return
     }
-    const result = calculateDataSize(Number.parseFloat(dataSize), fromUnit, toUnit).toString()
-    onCalculation(`Konvertiere ${dataSize}${fromUnit} zu ${toUnit}`, `${result}${toUnit}`)
+
+    try {
+      const size = Number.parseFloat(dataSize)
+      if (isNaN(size) || size < 0) {
+        throw new Error("Ungültige Datengröße.")
+      }
+      const result = calculateDataSize(size, fromUnit, toUnit)
+      let formattedResult: string
+      if (result >= 1 || result === 0) {
+        formattedResult = result % 1 === 0 ? result.toString() : result.toFixed(1)
+      } else {
+        formattedResult = result.toFixed(3).replace(/\.?0+$/, "")
+      }
+      formattedResult = formattedResult.replace(".", ",")
+      onCalculation(`${dataSize} ${fromUnit} zu ${toUnit}`, `${formattedResult} ${toUnit}`)
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
   }
 
-  const handlePixelCalculation = () => {
+  const handleGraphicsCalculation = () => {
+    setErrorMessage("")
     if (!width || !height) {
-      alert("Bitte geben Sie Breite und Höhe ein.")
+      setErrorMessage("Bitte geben Sie Breite und Höhe ein.")
       return
     }
-    const result = calculatePixels(
-      Number.parseInt(width),
-      Number.parseInt(height),
-      Number.parseInt(colorDepth),
-    ).toString()
-    onCalculation(`Berechne Größe für ${width}×${height} Pixel bei ${colorDepth} Bit`, `${result} Bit`)
+
+    try {
+      const w = Number.parseInt(width)
+      const h = Number.parseInt(height)
+      const cd = Number.parseInt(colorDepth)
+      if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+        throw new Error("Ungültige Breite oder Höhe.")
+      }
+
+      const imageSize = calculateImageSize(w, h, cd)
+      const imageSizeMB = roundToSignificantDigits(imageSize / (1024 * 1024), 3)
+
+      let result = `Bildgröße: ${imageSizeMB} MB`
+
+      if (frameRate && duration) {
+        const fr = Number.parseInt(frameRate)
+        const dur = Number.parseInt(duration)
+        if (!isNaN(fr) && !isNaN(dur) && fr > 0 && dur > 0) {
+          const videoSize = calculateVideoSize(w, h, cd, fr, dur)
+          const videoSizeMB = roundToSignificantDigits(videoSize / (1024 * 1024), 3)
+          result += `\nVideogröße: ${videoSizeMB} MB`
+        }
+      }
+
+      onCalculation(`Berechne Grafikspeicher für ${w}x${h} Pixel, ${cd} Bit Farbtiefe`, result)
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
   }
 
   return (
@@ -61,14 +127,29 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="conversion">Zahlensysteme</TabsTrigger>
         <TabsTrigger value="data-size">Datengrößen</TabsTrigger>
-        <TabsTrigger value="pixels">Pixel</TabsTrigger>
+        <TabsTrigger value="graphics">Grafikspeicher</TabsTrigger>
       </TabsList>
+
+      {errorMessage && <ErrorBadge message={errorMessage} />}
 
       <TabsContent value="conversion" className="space-y-4">
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label>Zahl</Label>
-            <Input value={binaryInput} onChange={(e) => setBinaryInput(e.target.value)} placeholder="Zahl eingeben" />
+            <Input
+              value={numberInput}
+              onChange={(e) => {
+                const value = e.target.value
+                if (fromBase === "10") {
+                  // Allow negative numbers for decimal
+                  setNumberInput(value.replace(/[^-0-9]/g, ""))
+                } else {
+                  // Remove any non-alphanumeric characters
+                  setNumberInput(value.replace(/[^a-fA-F0-9]/g, ""))
+                }
+              }}
+              placeholder="Zahl eingeben"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
@@ -78,10 +159,11 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2">Binär (2)</SelectItem>
-                  <SelectItem value="8">Oktal (8)</SelectItem>
-                  <SelectItem value="10">Dezimal (10)</SelectItem>
-                  <SelectItem value="16">Hexadezimal (16)</SelectItem>
+                  {Object.entries(bases).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -92,10 +174,11 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2">Binär (2)</SelectItem>
-                  <SelectItem value="8">Oktal (8)</SelectItem>
-                  <SelectItem value="10">Dezimal (10)</SelectItem>
-                  <SelectItem value="16">Hexadezimal (16)</SelectItem>
+                  {Object.entries(bases).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -123,11 +206,11 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="B">Bytes (B)</SelectItem>
-                  <SelectItem value="KB">Kilobytes (KB)</SelectItem>
-                  <SelectItem value="MB">Megabytes (MB)</SelectItem>
-                  <SelectItem value="GB">Gigabytes (GB)</SelectItem>
-                  <SelectItem value="TB">Terabytes (TB)</SelectItem>
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -138,11 +221,11 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="B">Bytes (B)</SelectItem>
-                  <SelectItem value="KB">Kilobytes (KB)</SelectItem>
-                  <SelectItem value="MB">Megabytes (MB)</SelectItem>
-                  <SelectItem value="GB">Gigabytes (GB)</SelectItem>
-                  <SelectItem value="TB">Terabytes (TB)</SelectItem>
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -151,7 +234,7 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
         </div>
       </TabsContent>
 
-      <TabsContent value="pixels" className="space-y-4">
+      <TabsContent value="graphics" className="space-y-4">
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label>Breite (Pixel)</Label>
@@ -186,7 +269,25 @@ export default function ITCalculator({ onCalculation }: ITCalculatorProps) {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handlePixelCalculation}>Berechnen</Button>
+          <div className="grid gap-2">
+            <Label>Bildrate (FPS) - Optional für Video</Label>
+            <Input
+              type="number"
+              value={frameRate}
+              onChange={(e) => setFrameRate(e.target.value)}
+              placeholder="Bildrate eingeben"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Dauer (Sekunden) - Optional für Video</Label>
+            <Input
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              placeholder="Dauer eingeben"
+            />
+          </div>
+          <Button onClick={handleGraphicsCalculation}>Berechnen</Button>
         </div>
       </TabsContent>
     </Tabs>

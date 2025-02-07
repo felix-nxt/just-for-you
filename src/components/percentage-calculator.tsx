@@ -4,18 +4,36 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { roundToSignificantDigits } from "@/utils/calculations"
 
 interface PercentageCalculatorProps {
   onCalculation: (input: string, result: string) => void
 }
 
 export default function PercentageCalculator({ onCalculation }: PercentageCalculatorProps) {
+  const [step, setStep] = useState(0)
   const [value, setValue] = useState("")
   const [percentage, setPercentage] = useState("")
+  const [calculationType, setCalculationType] = useState("")
 
-  const calculatePercentage = (type: string) => {
-    if (!value || !percentage) {
-      alert("Bitte geben Sie beide Werte ein.")
+  const resetCalculator = () => {
+    setStep(0)
+    setValue("")
+    setPercentage("")
+    setCalculationType("")
+  }
+
+  const handleNextStep = () => {
+    if (step === 0 && calculationType) {
+      setStep(1)
+    } else if (step === 1 && value) {
+      setStep(2)
+    }
+  }
+
+  const calculatePercentage = () => {
+    if (!value || !percentage || !calculationType) {
+      alert("Bitte füllen Sie alle Felder aus.")
       return
     }
     const val = Number.parseFloat(value)
@@ -23,7 +41,7 @@ export default function PercentageCalculator({ onCalculation }: PercentageCalcul
     let result = 0
     let description = ""
 
-    switch (type) {
+    switch (calculationType) {
       case "of":
         result = (val * perc) / 100
         description = `${perc}% von ${val}`
@@ -37,42 +55,50 @@ export default function PercentageCalculator({ onCalculation }: PercentageCalcul
         description = `${val} verringert um ${perc}%`
         break
       case "is":
-        result = (val / percentage) * 100
-        description = `${val} ist wieviel % von ${percentage}`
+        result = (val / perc) * 100
+        description = `${val} ist ${result.toFixed(2)}% von ${perc}`
         break
       case "to":
-        result = ((val - percentage) / percentage) * 100
-        description = `Prozentuale Änderung von ${percentage} zu ${val}`
+        result = ((val - perc) / perc) * 100
+        description = `Prozentuale Änderung von ${perc} zu ${val} ist ${result.toFixed(2)}%`
         break
     }
 
-    onCalculation(description, result.toFixed(2))
+    onCalculation(description, roundToSignificantDigits(result).toString())
+    resetCalculator()
   }
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label>Wert</Label>
-          <Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Wert eingeben" />
+      {step === 0 && (
+        <div className="grid gap-4">
+          <Label>Wählen Sie die Berechnungsart</Label>
+          <Button onClick={() => setCalculationType("of")}>% von Zahl</Button>
+          <Button onClick={() => setCalculationType("increase")}>Erhöhen um %</Button>
+          <Button onClick={() => setCalculationType("decrease")}>Verringern um %</Button>
+          <Button onClick={() => setCalculationType("is")}>Ist wieviel %</Button>
+          <Button onClick={() => setCalculationType("to")}>% Änderung</Button>
         </div>
-        <div className="grid gap-2">
-          <Label>Prozentsatz</Label>
+      )}
+      {step === 1 && (
+        <div className="grid gap-4">
+          <Label>Geben Sie den Wert ein</Label>
+          <Input type="number" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Wert eingeben" />
+          <Button onClick={handleNextStep}>Weiter</Button>
+        </div>
+      )}
+      {step === 2 && (
+        <div className="grid gap-4">
+          <Label>Geben Sie den Prozentsatz ein</Label>
           <Input
             type="number"
             value={percentage}
             onChange={(e) => setPercentage(e.target.value)}
             placeholder="Prozentsatz eingeben"
           />
+          <Button onClick={calculatePercentage}>Berechnen</Button>
         </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Button onClick={() => calculatePercentage("of")}>% von Zahl</Button>
-        <Button onClick={() => calculatePercentage("increase")}>Erhöhen um %</Button>
-        <Button onClick={() => calculatePercentage("decrease")}>Verringern um %</Button>
-        <Button onClick={() => calculatePercentage("is")}>Ist wieviel %</Button>
-        <Button onClick={() => calculatePercentage("to")}>% Änderung</Button>
-      </div>
+      )}
     </div>
   )
 }
