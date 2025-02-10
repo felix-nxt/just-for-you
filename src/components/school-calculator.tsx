@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { roundToSignificantDigits } from "@/utils/calculations"
+import ErrorBadge from "./error-badge"
 
 interface SchoolCalculatorProps {
   onCalculation: (input: string, result: string) => void
@@ -12,29 +13,48 @@ interface SchoolCalculatorProps {
 
 export default function SchoolCalculator({ onCalculation }: SchoolCalculatorProps) {
   const [grades, setGrades] = useState<string[]>([""])
+  const [errorMessage, setErrorMessage] = useState("")
 
   const addGrade = () => {
     setGrades([...grades, ""])
+    setErrorMessage("")
   }
 
   const updateGrade = (index: number, value: string) => {
     const newGrades = [...grades]
     newGrades[index] = value
     setGrades(newGrades)
+
+    if (value === "") {
+      setErrorMessage("")
+    } else if (!validateGrade(value)) {
+      setErrorMessage("Die Note muss zwischen 1 und 6 liegen.")
+    } else {
+      setErrorMessage("")
+    }
+  }
+
+  const validateGrade = (grade: string): boolean => {
+    const numGrade = Number.parseFloat(grade)
+    return !isNaN(numGrade) && numGrade >= 1 && numGrade <= 6
   }
 
   const calculateAverage = () => {
-    const validGrades = grades.map((g) => Number.parseFloat(g)).filter((g) => !isNaN(g) && g >= 1 && g <= 6)
+    const validGrades = grades.filter((g) => g !== "" && validateGrade(g))
 
     if (validGrades.length === 0) {
-      alert("Bitte geben Sie mindestens eine gültige Note ein.")
+      setErrorMessage("Bitte geben Sie mindestens eine gültige Note ein.")
       return
     }
 
-    const sum = validGrades.reduce((a, b) => a + b, 0)
-    const average = roundToSignificantDigits(sum / validGrades.length)
+    const numericGrades = validGrades.map((g) => Number.parseFloat(g))
+    const sum = numericGrades.reduce((a, b) => a + b, 0)
+    const average = roundToSignificantDigits(sum / numericGrades.length, 2)
 
-    onCalculation(`Durchschnitt von ${validGrades.length} Noten`, `${average} (${getGradeRecommendation(average)})`)
+    onCalculation(
+      `Durchschnitt von ${numericGrades.length} Noten`,
+      `${average.toFixed(2)} (${getGradeRecommendation(average)})`,
+    )
   }
 
   const getGradeRecommendation = (average: number): string => {
@@ -48,6 +68,7 @@ export default function SchoolCalculator({ onCalculation }: SchoolCalculatorProp
 
   return (
     <div className="grid gap-6">
+      {errorMessage && <ErrorBadge message={errorMessage} />}
       <div className="grid gap-4">
         {grades.map((grade, index) => (
           <div key={index} className="grid gap-2">
@@ -60,6 +81,7 @@ export default function SchoolCalculator({ onCalculation }: SchoolCalculatorProp
               value={grade}
               onChange={(e) => updateGrade(index, e.target.value)}
               placeholder="Note eingeben (1-6)"
+              className={!validateGrade(grade) && grade !== "" ? "border-red-500" : ""}
             />
           </div>
         ))}
