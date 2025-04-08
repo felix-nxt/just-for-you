@@ -14,6 +14,7 @@ import type { CalculationHistory, CalculatorMode } from "@/types/calculator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function CalculatorApp() {
   const [history, setHistory] = useState<CalculationHistory[]>([])
@@ -168,7 +169,16 @@ export default function CalculatorApp() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="font-family">Schriftart</Label>
-              <Input id="font-family" value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} />
+              <Select value={fontFamily} onValueChange={setFontFamily}>
+                <SelectTrigger id="font-family">
+                  <SelectValue placeholder="Wählen Sie eine Schriftart" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sans-serif">Sans Serif</SelectItem>
+                  <SelectItem value="serif">Serif</SelectItem>
+                  <SelectItem value="monospace">Monospace</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="background-color">Hintergrundfarbe</Label>
