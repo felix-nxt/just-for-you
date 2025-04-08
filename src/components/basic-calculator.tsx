@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,16 +62,18 @@ export default function BasicCalculator({ onCalculation }: BasicCalculatorProps)
         value={display}
         onChange={(e) => setDisplay(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="text-right text-2xl font-mono p-4"
+        className="text-right text-lg font-mono p-2"
         placeholder="0"
       />
       {errorMessage && <ErrorBadge message={errorMessage} />}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1">
         {buttons.map((btn) => (
           <Button
             key={btn}
             onClick={() => handleButtonClick(btn)}
             variant={["=", "+", "-", "*", "/"].includes(btn) ? "default" : "outline"}
+            size="sm"
+            className="text-sm py-1"
           >
             {btn}
           </Button>
@@ -78,4 +82,3 @@ export default function BasicCalculator({ onCalculation }: BasicCalculatorProps)
     </div>
   )
 }
-

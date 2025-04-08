@@ -198,4 +198,3 @@ export default function CreditCalculator({ onCalculation }: CreditCalculatorProp
     </div>
   )
 }
-

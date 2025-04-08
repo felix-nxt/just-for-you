@@ -1,4 +1,4 @@
-export type CalculatorMode = 'basic' | 'it' | 'percentage' | 'credit' | 'geometry' | 'math' | 'school';
+export type CalculatorMode = 'basic' | 'it' | 'percentage' | 'credit' | 'geometry' | 'math' | 'school' | 'system';
 
 export type CalculationType = 
   | 'basic' 
@@ -9,11 +9,14 @@ export type CalculationType =
   | 'credit'
   | 'geometry'
   | 'math'
-  | 'school';
+  | 'school'
+  | 'system';
 
 export interface CalculationHistory {
-  input: string;
-  result: string;
-  type: CalculationType;
-  timestamp: Date;
+  input: string
+  result: string
+  calculation?: string
+  type: CalculatorMode
+  timestamp: Date
+  date?: string
 }
