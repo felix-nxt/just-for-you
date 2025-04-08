@@ -93,22 +93,28 @@ export default function CreditCalculator({ onCalculation }: CreditCalculatorProp
           return
         }
         const payment = Number.parseFloat(installment)
-        if (isNaN(payment) || payment <= 0) {
-          setErrorMessage("Bitte geben Sie eine gültige positive Zahl für die Ratenhöhe ein.")
+        if (isNaN(payment) || payment <= 0 || payment <= principal * rate) {
+          setErrorMessage("Die Ratenhöhe ist zu niedrig oder ungültig.")
           return
         }
-        if (payment <= principal * rate) {
-          setErrorMessage("Die Ratenhöhe ist zu niedrig, um den Kredit jemals zurückzuzahlen.")
-          return
-        }
-        const numberOfPayments = Math.ceil(Math.log(payment / (payment - principal * rate)) / Math.log(1 + rate))
-        const actualTotalPaid = payment * numberOfPayments
+
+        // Calculate payments and final installment
+        const exactPayments = Math.log(payment / (payment - principal * rate)) / Math.log(1 + rate)
+        const numberOfPayments = Math.ceil(exactPayments)
+        const regularPayments = numberOfPayments - 1
+        const remainingBalance = principal * Math.pow(1 + rate, regularPayments) - 
+          payment * (Math.pow(1 + rate, regularPayments) - 1) / rate
+        const finalPayment = remainingBalance * (1 + rate)
+        
+        const actualTotalPaid = (payment * regularPayments) + finalPayment
         const actualTotalInterest = actualTotalPaid - principal
+
         result =
           `Kreditbetrag: ${principal.toFixed(2)} €\n` +
           `Zinssatz: ${(rate * 12 * 100).toFixed(2)}%\n` +
           `Monatliche Rate: ${payment.toFixed(2)} €\n` +
           `Laufzeit: ${numberOfPayments} Monate\n` +
+          (Math.abs(payment - finalPayment) > 0.01 ? `Schlussrate: ${finalPayment.toFixed(2)} €\n` : '') +
           `Rückzahlungsbetrag: ${actualTotalPaid.toFixed(2)} €\n` +
           `Zinsen gesamt: ${actualTotalInterest.toFixed(2)} €`
         description = `Ratenkredit mit fester Ratenhöhe von ${payment.toFixed(2)} €`
